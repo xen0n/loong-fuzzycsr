@@ -4,7 +4,7 @@
 MY_MODULE=fuzzycsr
 MY_VERSION=0.1
 
-obj-m = $(MY_MODULE).o
+obj-m = $(MY_MODULE).o csr_stubs.o
 
 #
 # Point --sourcetree at the directory above this file.
