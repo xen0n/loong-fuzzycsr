@@ -25,9 +25,9 @@ This is meant for developers tinkering with LoongArch internals only, *not* for 
 sudo modprobe fuzzycsr
 
 # first, configure a mask
-echo 0xffffffff00000000 > /sys/kernel/debug/loongarch/fuzzycsr/mask
+echo 0xffffffff00000000 > /sys/kernel/debug/loongarch/fuzzycsr/poke/mask
 # then poke a CSR of your choice
-cat /sys/kernel/debug/loongarch/fuzzycsr/poke-12345
+cat /sys/kernel/debug/loongarch/fuzzycsr/poke/12345
 # will perform a csrxchg with the configured mask, both as a mask and
 # the swapped-in value itself, then immediately restore the original
 # value to the CSR and return the transient new value to userland
