@@ -17,3 +17,12 @@ SYM_FUNC_START(poke_csr_stubs)
 .set csr, csr + 1
 .endr
 SYM_FUNC_END(poke_csr_stubs)
+
+SYM_FUNC_START(read_csr_stubs)
+.set csr, 0
+.rept 16384
+	csrrd $a0, csr
+	ret
+.set csr, csr + 1
+.endr
+SYM_FUNC_END(read_csr_stubs)

@@ -22,7 +22,8 @@ sudo dkms install fuzzycsr/0.1
 This is meant for developers tinkering with LoongArch internals only, *not* for general public use. You have been warned.
 
 ```sh
-sudo modprobe fuzzycsr
+# all commands are meant to be run as root
+modprobe fuzzycsr
 
 # first, configure a mask
 echo 0xffffffff00000000 > /sys/kernel/debug/loongarch/fuzzycsr/poke/mask
@@ -35,6 +36,15 @@ cat /sys/kernel/debug/loongarch/fuzzycsr/poke/12345
 
 With luck, you can now discover undocumented CSRs and writable bits
 implemented in your favorite LoongArch core!
+
+Or if you just want to read something out of some CSR:
+
+```sh
+cat /sys/kernel/debug/loongarch/fuzzycsr/read/123
+```
+
+Some seemingly benign CSRs can in fact straight *crash* the system even when `csrxchg`'d with zero mask and value, such as `CSR.BADI` on QEMU.
+We provide the `read` variant for all CSRs so you can see them live!
 
 ## License
 
