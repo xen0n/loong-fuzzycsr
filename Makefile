@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-
 MY_MODULE=fuzzycsr
 MY_VERSION=0.1
 
-obj-m = $(MY_MODULE).o csr_stubs.o
+obj-m += fuzzycsr.o
+fuzzycsr-y := csr_stubs.o fuzzycsr.o
 
 #
 # Point --sourcetree at the directory above this file.

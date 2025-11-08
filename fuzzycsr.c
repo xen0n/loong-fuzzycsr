@@ -19,10 +19,9 @@
 extern struct dentry *arch_debugfs_dir;
 
 struct dentry *fuzzycsr_dir;
-u16 csr_id;
 u64 mask;
 
-u64 (*poke_csr_fn_t)(u64);
+typedef u64 (*poke_csr_fn_t)(u64);
 u64 poke_csr_stubs(u64 mask);
 #define STUB_LEN (4*4)  // 4 insns
 
@@ -30,15 +29,14 @@ local_lock_t csr_lock;
 
 // Usage:
 //
-// 1. write CSR number (u14, e.g. "12345\n") to /sys/kernel/debug/loongarch/fuzzycsr/csr
-// 2. write mask (u64, e.g. "0xFFFFFFFF00000000\n") to /sys/kernel/debug/loongarch/fuzzycsr/mask
-// 3. read from /sys/kernel/debug/loongarch/fuzzycsr/poke
+// 1. write mask (u64, e.g. "0xFFFFFFFF00000000\n") to /sys/kernel/debug/loongarch/fuzzycsr/mask
+// 2. read from /sys/kernel/debug/loongarch/fuzzycsr/poke-CSR_ID
 
-static u64 poke_csr(void)
+static u64 poke_csr(u16 csr_id)
 {
 	unsigned long flags;
 	u64 ret;
-	u64 (*poke_fn)(u64) = (poke_csr_fn_t)(((void *)poke_csr_stubs) + STUB_LEN * (csr_id & 0x3fff));
+	poke_csr_fn_t poke_fn = (poke_csr_fn_t)(void *)(((u64)(void *)poke_csr_stubs) + (u64)(STUB_LEN * (csr_id & 0x3fff)));
 
 	migrate_disable();
 	local_lock_irqsave(&csr_lock, flags);
@@ -54,7 +52,8 @@ static u64 poke_csr(void)
 //
 static int poke_get(void *data, u64 *val)
 {
-	*val = poke_csr();
+	u16 csr_id = (u16)(u64)data;
+	*val = poke_csr(csr_id);
 	return 0;
 }
 
@@ -63,17 +62,18 @@ DEFINE_DEBUGFS_ATTRIBUTE(poke_fops, poke_get, NULL, "0x%016llx\n");
 static int fuzzycsr_init(void)
 {
 	int i;
-
 	pr_info("module_init\n");
 
-	csr_id = 0;
 	mask = 0;
 
 	local_lock_init(&csr_lock);
 	fuzzycsr_dir = debugfs_create_dir("fuzzycsr", arch_debugfs_dir);
-	debugfs_create_u16("csr", 0644, fuzzycsr_dir, &csr_id);
 	debugfs_create_x64("mask", 0644, fuzzycsr_dir, &mask);
-	debugfs_create_file("poke", 0444, fuzzycsr_dir, NULL, &poke_fops);
+	for (i = 0; i < 0x3fff; i++) {
+		char filename[11];  // len("poke-16383") + 1
+		snprintf(filename, sizeof(filename), "poke-%d", i);
+		debugfs_create_file(filename, 0444, fuzzycsr_dir, (void *)(u64)i, &poke_fops);
+	}
 
 	return 0;
 }
