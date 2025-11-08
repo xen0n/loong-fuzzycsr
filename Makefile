@@ -4,7 +4,7 @@ MY_MODULE=fuzzycsr
 MY_VERSION=0.1
 
 obj-m += fuzzycsr.o
-fuzzycsr-y := csr_stubs.o fuzzycsr.o
+fuzzycsr-y := csr_stubs.o main.o
 
 #
 # Point --sourcetree at the directory above this file.
