@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 MY_MODULE=fuzzycsr
-MY_VERSION=0.1
+MY_VERSION=0.2
 
 obj-m += fuzzycsr.o
 fuzzycsr-y := csr_stubs.o main.o

@@ -12,7 +12,7 @@ make -C "/lib/modules/$(uname -r)/build" M="$(pwd)" modules
 
 # or deploy via DKMS:
 sudo dkms add "$(pwd)"
-sudo dkms install fuzzycsr/0.1
+sudo dkms install fuzzycsr/0.2
 ```
 
 ## Usage
