@@ -32,6 +32,9 @@ cat /sys/kernel/debug/loongarch/fuzzycsr/poke/12345
 # will perform a csrxchg with the configured mask, both as a mask and
 # the swapped-in value itself, then immediately restore the original
 # value to the CSR and return the transient new value to userland
+
+# or poke every online CPU
+cat /sys/kernel/debug/loongarch/fuzzycsr/global/poke/12345
 ```
 
 With luck, you can now discover undocumented CSRs and writable bits
@@ -41,6 +44,7 @@ Or if you just want to read something out of some CSR:
 
 ```sh
 cat /sys/kernel/debug/loongarch/fuzzycsr/read/123
+cat /sys/kernel/debug/loongarch/fuzzycsr/global/read/123
 ```
 
 Some seemingly benign CSRs can in fact straight *crash* the system even when `csrxchg`'d with zero mask and value, such as `CSR.BADI` on QEMU.
