@@ -74,19 +74,12 @@ static int read_get(void *data, u64 *val)
 
 DEFINE_DEBUGFS_ATTRIBUTE(read_fops, read_get, NULL, "0x%016llx\n");
 
-
-static int fuzzycsr_init(void)
+static void fuzzycsr_create_files(struct dentry *parent)
 {
 	int i;
 	struct dentry *poke_dir, *read_dir;
-	pr_info("module_init\n");
 
-	mask = 0;
-
-	local_lock_init(&csr_lock);
-	fuzzycsr_dir = debugfs_create_dir("fuzzycsr", arch_debugfs_dir);
-
-	poke_dir = debugfs_create_dir("poke", fuzzycsr_dir);
+	poke_dir = debugfs_create_dir("poke", parent);
 	debugfs_create_x64("mask", 0644, poke_dir, &mask);
 	for (i = 0; i <= 0x3fff; i++) {
 		char filename[6];  // len("16383") + 1
@@ -94,12 +87,22 @@ static int fuzzycsr_init(void)
 		debugfs_create_file(filename, 0444, poke_dir, (void *)(u64)i, &poke_fops);
 	}
 
-	read_dir = debugfs_create_dir("read", fuzzycsr_dir);
+	read_dir = debugfs_create_dir("read", parent);
 	for (i = 0; i <= 0x3fff; i++) {
 		char filename[6];  // len("16383") + 1
 		snprintf(filename, sizeof(filename), "%d", i);
 		debugfs_create_file(filename, 0444, read_dir, (void *)(u64)i, &read_fops);
 	}
+}
+
+static int fuzzycsr_init(void)
+{
+	pr_info("module_init\n");
+
+	mask = 0;
+	local_lock_init(&csr_lock);
+	fuzzycsr_dir = debugfs_create_dir("fuzzycsr", arch_debugfs_dir);
+	fuzzycsr_create_files(fuzzycsr_dir);
 
 	return 0;
 }
