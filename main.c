@@ -6,6 +6,7 @@
 #include <linux/kernel.h>
 #include <linux/local_lock.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/preempt.h>
 #include <linux/sched.h>  // migrate_disable
 
@@ -32,23 +33,21 @@ u64 read_csr_stubs(void);
 #define READ_STUB_LEN (2*4)  // 2 insns
 
 local_lock_t csr_lock;
+
+struct mutex global_csr_op_result_mutex;
 DEFINE_PER_CPU(u64, global_csr_op_result);
 
-static u64 poke_csr(u16 csr_id, bool lock)
+static u64 poke_csr(u16 csr_id)
 {
 	unsigned long flags;
 	u64 ret;
 	poke_csr_fn_t poke_fn = (poke_csr_fn_t)(void *)(((u64)(void *)poke_csr_stubs) + (u64)(POKE_STUB_LEN * (csr_id & 0x3fff)));
 
-	if (lock) {
-		migrate_disable();
-		local_lock_irqsave(&csr_lock, flags);
-	}
+	migrate_disable();
+	local_lock_irqsave(&csr_lock, flags);
 	ret = poke_fn(mask);
-	if (lock) {
-		local_unlock_irqrestore(&csr_lock, flags);
-		migrate_enable();
-	}
+	local_unlock_irqrestore(&csr_lock, flags);
+	migrate_enable();
 
 	return ret;
 }
@@ -67,7 +66,7 @@ struct percpu_info_desc {
 static void poke_csr_percpu(void *info)
 {
 	struct percpu_info_desc *desc = info;
-	this_cpu_write(desc->result, poke_csr(desc->csr_id, false));
+	this_cpu_write(desc->result, poke_csr(desc->csr_id));
 }
 
 static void read_csr_percpu(void *info)
@@ -83,7 +82,7 @@ static void read_csr_percpu(void *info)
 static int poke_get(void *data, u64 *val)
 {
 	u16 csr_id = (u16)(u64)data;
-	*val = poke_csr(csr_id, true);
+	*val = poke_csr(csr_id);
 	return 0;
 }
 
@@ -108,7 +107,7 @@ static void global_poke_prepare(u64 __percpu *data, void *info)
 		.csr_id = (u16)(u64)info,
 		.result = data,
 	};
-	local_lock(&csr_lock);
+	mutex_lock(&global_csr_op_result_mutex);
 	on_each_cpu(poke_csr_percpu, &desc, 1);
 	// unlocking is deferred to after the buffer has been prepared
 }
@@ -120,14 +119,14 @@ static void global_read_prepare(u64 __percpu *data, void *info)
 		.csr_id = (u16)(u64)info,
 		.result = data,
 	};
-	local_lock(&csr_lock);
+	mutex_lock(&global_csr_op_result_mutex);
 	on_each_cpu(read_csr_percpu, &desc, 1);
 	// unlocking is deferred to after the buffer has been prepared
 }
 
 static void global_array_unlock(void)
 {
-	local_unlock(&csr_lock);
+	mutex_unlock(&global_csr_op_result_mutex);
 }
 
 //
@@ -192,10 +191,11 @@ static int fuzzycsr_init(void)
 
 		global_read_descs[i].data = &get_cpu_var(global_csr_op_result);
 		global_read_descs[i].prepare_fn = global_read_prepare;
-		global_poke_descs[i].prepare_unlock_fn = global_array_unlock;
+		global_read_descs[i].prepare_unlock_fn = global_array_unlock;
 		global_read_descs[i].info = (void *)(u64)i;
 	}
 
+	mutex_init(&global_csr_op_result_mutex);
 	global_dir = debugfs_create_dir("global", fuzzycsr_dir);
 	fuzzycsr_create_files(global_dir, true);
 
