@@ -184,12 +184,12 @@ static int fuzzycsr_init(void)
 	fuzzycsr_create_files(fuzzycsr_dir, false);
 
 	for (i = 0; i < 16384; i++) {
-		global_poke_descs[i].data = &get_cpu_var(global_csr_op_result);
+		global_poke_descs[i].data = &global_csr_op_result;
 		global_poke_descs[i].prepare_fn = global_poke_prepare;
 		global_poke_descs[i].prepare_unlock_fn = global_array_unlock;
 		global_poke_descs[i].info = (void *)(u64)i;
 
-		global_read_descs[i].data = &get_cpu_var(global_csr_op_result);
+		global_read_descs[i].data = &global_csr_op_result;
 		global_read_descs[i].prepare_fn = global_read_prepare;
 		global_read_descs[i].prepare_unlock_fn = global_array_unlock;
 		global_read_descs[i].info = (void *)(u64)i;
